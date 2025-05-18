@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
 using Api.Domain;
 using Api.Infrastructure;
+using Api.Shared.Options;
+using Api.Shared.Utilities;
 using Microsoft.OpenApi.Models;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -36,6 +38,13 @@ builder.Services.AddMediatR(
     cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddScoped<IEmployeesRepository, EmployeesRepository>();
 builder.Services.AddScoped<IDependentsRepository, DependentsRepository>();
+builder.Services.AddSingleton<IClockService, ClockService>();
+
+builder.Services.AddOptions<EmployeePaycheckCalculatorOptions>()
+    .Bind(builder.Configuration.GetRequiredSection(nameof(EmployeePaycheckCalculatorOptions)));
+// Validate<> method can be called to perform validation.
+// Usually, I use FluentValidation,
+// so IValidator<EmployeePaycheckCalculatorOptionsValidator> interface is passed to Validate<> method.
 
 WebApplication app = builder.Build();
 

@@ -16,7 +16,14 @@
       "launchUrl": "swagger",
       "applicationUrl": "https://localhost:7124;http://localhost:5124",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "EmployeePaycheckCalculatorOptions__PaychecksPerYear": "26",
+        "EmployeePaycheckCalculatorOptions__BaseCostPerMonth": "1000",
+        "EmployeePaycheckCalculatorOptions__SalaryThresholdPerYear": "80000",
+        "EmployeePaycheckCalculatorOptions__ExtraCostOverSalaryThresholdPercentsPerYear": "2",
+        "EmployeePaycheckCalculatorOptions__DependentCostPerMonth": "600",
+        "EmployeePaycheckCalculatorOptions__ExtraDependentCostPerMonth": "200",
+        "EmployeePaycheckCalculatorOptions__DependentAgeThreshold": "50"
       }
     },
     "IIS Express": {
