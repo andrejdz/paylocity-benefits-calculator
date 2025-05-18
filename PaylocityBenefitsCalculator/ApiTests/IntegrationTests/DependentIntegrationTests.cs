@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Api.Dtos.Dependent;
-using Api.Models;
+using Api.Domain;
+using Api.UseCases;
 using Xunit;
 
 namespace ApiTests.IntegrationTests;
@@ -15,7 +15,7 @@ public class DependentIntegrationTests : IntegrationTest
     public async Task WhenAskedForAllDependents_ShouldReturnAllDependents()
     {
         var response = await HttpClient.GetAsync("/api/v1/dependents");
-        var dependents = new List<GetDependentDto>
+        var dependents = new List<DependentResponse>
         {
             new()
             {
@@ -58,7 +58,7 @@ public class DependentIntegrationTests : IntegrationTest
     public async Task WhenAskedForADependent_ShouldReturnCorrectDependent()
     {
         var response = await HttpClient.GetAsync("/api/v1/dependents/1");
-        var dependent = new GetDependentDto
+        var dependent = new DependentResponse
         {
             Id = 1,
             FirstName = "Spouse",
