@@ -1,6 +1,9 @@
-﻿using Api.Dtos.Dependent;
-using Api.Dtos.Employee;
-using Api.Models;
+﻿using System.Net.Mime;
+using Api.Shared;
+using Api.UseCases.Employees;
+using Api.UseCases.Employees.Queries.GetEmployeeById;
+using Api.UseCases.Employees.Queries.GetEmployees;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -8,92 +11,104 @@ namespace Api.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
+[Produces(MediaTypeNames.Application.Json)]
 public class EmployeesController : ControllerBase
 {
+    // Retuning API response.
+    // Usually, when Web API that follows REST API principals is being implemented,
+    // HTTP status codes are used to signal whether operation is successful or not.
+    // Not sure how ApiResponse is used by a client, but if, for example, always 200 HTTP status code is returned,
+    // and client is pushed to check Success property of ApiResponse.
+    // This might cause an issue, because client might implement some retry mechanism based on HTTP status codes.
+    // In that case, if 200 HTTP status code is returned, client might think that operation was successful,
+    // despite the fact that transient error occurred that can be retried.
+
+    private readonly ISender _sender;
+
+    public EmployeesController(ISender sender)
+    {
+        _sender = sender;
+    }
+
     [SwaggerOperation(Summary = "Get employee by id")]
     [HttpGet("{id}")]
-    public async Task<ActionResult<ApiResponse<GetEmployeeDto>>> Get(int id)
+    [SwaggerResponse(StatusCodes.Status200OK, Type = typeof(ApiResponse<EmployeeResponse>))]
+    [SwaggerResponse(StatusCodes.Status404NotFound, Type = typeof(ApiResponse<EmployeeResponse>))]
+    [SwaggerResponse(StatusCodes.Status500InternalServerError, Type = typeof(ApiResponse<EmployeeResponse>))]
+    public async Task<ActionResult<ApiResponse<EmployeeResponse>>> Get(int id)
     {
-        throw new NotImplementedException();
+        try
+        {
+            GetEmployeeByIdQuery query = new()
+            {
+                Id = id,
+            };
+            EmployeeResponse? response = await _sender.Send(query);
+            if (response is null)
+            {
+                return NotFound(
+                    new ApiResponse<EmployeeResponse>
+                    {
+                        Success = false,
+                        Error = $"Employee with id {id} was not found.",
+                    });
+            }
+
+            return new ApiResponse<EmployeeResponse> 
+            {
+                Data = response,
+                Success = true,
+            };
+        }
+        // Usually, I use global exception handler to handle unhandled exceptions.
+        catch (Exception ex)
+        {
+            // Log exception here.
+
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new ApiResponse<EmployeeResponse>
+                {
+                    Success = false,
+                    Error = ex.Message, // Instead of using message from an exception, some generic error message can be used.
+                });
+        }
     }
 
     [SwaggerOperation(Summary = "Get all employees")]
     [HttpGet("")]
-    public async Task<ActionResult<ApiResponse<List<GetEmployeeDto>>>> GetAll()
+    [SwaggerResponse(StatusCodes.Status200OK, Type = typeof(ApiResponse<List<EmployeeResponse>>))]
+    [SwaggerResponse(StatusCodes.Status500InternalServerError, Type = typeof(ApiResponse<List<EmployeeResponse>>))]
+    public async Task<ActionResult<ApiResponse<List<EmployeeResponse>>>> GetAll()
     {
-        //task: use a more realistic production approach
-        var employees = new List<GetEmployeeDto>
+        try
         {
-            new()
-            {
-                Id = 1,
-                FirstName = "LeBron",
-                LastName = "James",
-                Salary = 75420.99m,
-                DateOfBirth = new DateTime(1984, 12, 30)
-            },
-            new()
-            {
-                Id = 2,
-                FirstName = "Ja",
-                LastName = "Morant",
-                Salary = 92365.22m,
-                DateOfBirth = new DateTime(1999, 8, 10),
-                Dependents = new List<GetDependentDto>
-                {
-                    new()
-                    {
-                        Id = 1,
-                        FirstName = "Spouse",
-                        LastName = "Morant",
-                        Relationship = Relationship.Spouse,
-                        DateOfBirth = new DateTime(1998, 3, 3)
-                    },
-                    new()
-                    {
-                        Id = 2,
-                        FirstName = "Child1",
-                        LastName = "Morant",
-                        Relationship = Relationship.Child,
-                        DateOfBirth = new DateTime(2020, 6, 23)
-                    },
-                    new()
-                    {
-                        Id = 3,
-                        FirstName = "Child2",
-                        LastName = "Morant",
-                        Relationship = Relationship.Child,
-                        DateOfBirth = new DateTime(2021, 5, 18)
-                    }
-                }
-            },
-            new()
-            {
-                Id = 3,
-                FirstName = "Michael",
-                LastName = "Jordan",
-                Salary = 143211.12m,
-                DateOfBirth = new DateTime(1963, 2, 17),
-                Dependents = new List<GetDependentDto>
-                {
-                    new()
-                    {
-                        Id = 4,
-                        FirstName = "DP",
-                        LastName = "Jordan",
-                        Relationship = Relationship.DomesticPartner,
-                        DateOfBirth = new DateTime(1974, 1, 2)
-                    }
-                }
-            }
-        };
+            // task: use a more realistic production approach
+            // I suppose the number of employees is expected to be big, so as an enhancments pagination can be added.
+            // So, GetEmployeesQuery can be modified to hold pagination parameters that are mapped from HTTP query parameters.
+            //
+            // EmployeeResponse is reused here, but sometimes it is required to return reduced amount of data, for example,
+            // dropping dependents from an employee.
+            // In this case, new response type can be created that does not contain collection of dependents.
+            List<EmployeeResponse> employees = await _sender.Send(new GetEmployeesQuery());
 
-        var result = new ApiResponse<List<GetEmployeeDto>>
+            return new ApiResponse<List<EmployeeResponse>>
+            {
+                Data = employees,
+                Success = true
+            };
+        }
+        catch (Exception ex)
         {
-            Data = employees,
-            Success = true
-        };
+            // Log exception here.
 
-        return result;
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new ApiResponse<List<EmployeeResponse>>
+                {
+                    Success = false,
+                    Error = ex.Message, // Instead of using message from an exception, some generic error message can be used.
+                });
+        }
     }
 }
